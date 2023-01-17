@@ -94,8 +94,8 @@ module RuboCop
 
         # @!method called_on_string?(node)
         def_node_matcher :called_on_string?, <<~PATTERN
-          {(send {nil? const_type?} _ (str _) ...)
-           (send (str ...) ...)}
+          {(send {nil? const_type?} _ {str dstr} ...)
+           (send {str dstr} ...)}
         PATTERN
 
         def method_with_format_args?(node)
@@ -143,11 +143,11 @@ module RuboCop
           return false if node.const_receiver? && !node.receiver.loc.name.is?(KERNEL)
           return false unless node.method?(name)
 
-          node.arguments.size > 1 && node.first_argument.str_type?
+          node.arguments.size > 1 && %i[str dstr].include?(node.first_argument.type)
         end
 
         def expected_fields_count(node)
-          return :unknown unless node.str_type?
+          return :unknown unless %i[str dstr].include?(node.type)
 
           format_string = RuboCop::Cop::Utils::FormatString.new(node.source)
           return 1 if format_string.named_interpolation?
