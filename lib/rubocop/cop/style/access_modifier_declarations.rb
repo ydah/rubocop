@@ -70,6 +70,7 @@ module RuboCop
       class AccessModifierDeclarations < Base
         extend AutoCorrector
 
+        include CommentsHelp
         include ConfigurableEnforcedStyle
         include RangeHelp
 
@@ -98,6 +99,10 @@ module RuboCop
           return if allow_modifiers_on_symbols?(node)
 
           if offense?(node)
+            return if node.right_siblings.any? do |sibling|
+              sibling.method?(node.method_name) && !sibling.arguments.empty?
+            end
+
             add_offense(node.loc.selector) do |corrector|
               autocorrect(corrector, node)
             end
@@ -129,8 +134,15 @@ module RuboCop
         end
 
         def offense?(node)
-          (group_style? && access_modifier_is_inlined?(node)) ||
+          (group_style? && access_modifier_is_inlined?(node) &&
+            !right_siblings_same_inline_method?(node)) ||
             (inline_style? && access_modifier_is_not_inlined?(node))
+        end
+
+        def right_siblings_same_inline_method?(node)
+          node.right_siblings.any? do |sibling|
+            sibling.method?(node.method_name) && !sibling.arguments.empty?
+          end
         end
 
         def group_style?
